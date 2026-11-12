@@ -40,17 +40,6 @@ tail 장면마다 생성 개수를 다르게 준다. tail 차량과 이웃 차�
 λ_c 와 후보 채우기 여부는 val 분할에서만 고르고, 정답은 지표 계산에만 쓴다. TUTR 평가에 적용한다.
 코드는 `safe_select/` 이고 값은 `eval` 절에 있다.
 
-### 가중치
-
-Ours 는 가중치가 두 가지다.
-
-| 이름 | 내용 |
-|---|---|
-| `ours` | 논문 결과표의 가중치. `--stage eval` 이 기본으로 평가한다 |
-| `ours13` | 이 저장소의 `configs/` 로 `ours` 단계를 돌려 학습한 가중치 |
-
-`ours` 는 생성 설정이 `configs/` 와 달라서 이 저장소의 `ours` 단계로 다시 만들어지지 않는다. `ours` 단계를 다시 돌리면 `ours13` 이 나온다.
-
 입력은 관측 10 프레임 (1 초), 출력은 예측 30 프레임 (3 초) 이고 10 Hz 이다. 모든 학습은 seed 1 이고 모델 선택은 val 분할로만 한다.
 
 ## 결과
@@ -132,8 +121,8 @@ python download_weights.py --only lcsim    # TUTR 만 쓸 때
 | `weights/tutr/<site>/vanilla/best.pth` | Vanilla |
 | `weights/tutr/<site>/contrastive/best.pth` | Contrastive(CP), 0~300 epoch best |
 | `weights/tutr/<site>/contrastive/best_2of3.pth` | Contrastive(CP), 0~200 epoch best. Ours 의 시작점 |
-| `weights/tutr/<site>/ours/best.pth` | Ours, 논문 결과표의 가중치 |
-| `weights/tutr/<site>/ours13/best.pth` | Ours, 이 저장소의 `ours` 단계로 학습한 가중치 |
+| `weights/tutr/<site>/ours/best.pth` | Ours. 논문 결과표를 재현하는 가중치 |
+| `weights/tutr/<site>/ours13/best.pth` | Ours. 이 저장소의 `ours` 단계로 다시 학습한 가중치 |
 | `weights/tutr/<site>/<방법>/run_motion_modes.pkl` | 그 모델이 쓰는 motion mode (k-means 중심) |
 | `weights/qcnet/<site>/{vanilla,contrastive,contrastive_best_2of3,ours,ours13}.ckpt` | QCNet, 뜻은 TUTR 와 같다 |
 | `weights/lcsim/<site>/lcsim_<site>.ckpt`, `pca.pkl` | 생성에 쓰는 LCSim 확산 모델 |
