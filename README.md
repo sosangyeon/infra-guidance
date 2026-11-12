@@ -7,18 +7,49 @@
 |---|---|
 | Vanilla | 백본을 init 분할로 300 epoch 학습 |
 | Contrastive(CP) | Vanilla 예측의 충돌 확률 (CP) 을 난이도로 쓰는 contrastive 손실을 더해 300 epoch 학습 |
-| Ours | Contrastive(CP) 의 0~200 epoch best 에서 시작해 100 epoch 을 3 라운드 (33, 33, 34) 로 이어서 학습. 라운드마다 remain 분할에서 오차가 큰 tail 장면을 찾고, 확산 모델 LCSim 에 가이던스를 걸어 그 장면을 다시 생성해 학습에 더한다 |
+| Ours | Contrastive(CP) 의 0~200 epoch best 에서 시작해 100 epoch 을 3 라운드 (33, 33, 34) 로 이어서 학습. 라운드마다 remain 분할에서 오차가 큰 tail 장면을 찾고, 확산 모델 LCSim 에 membership 가이던스를 걸어 그 장면을 다시 생성해 학습에 더한다 |
+
+## 방법
+
+Ours 는 CP contrastive 학습, membership 가이던스, RSS 재분배, 안전 궤적 선택의 네 요소로 이루어진다.
+
+### CP contrastive
+
+Vanilla 의 top-1 예측으로 같은 장면 이웃 차량과의 충돌 확률 (CP) 을 계산해 샘플마다 난이도로 붙인다.
+학습할 때는 배치 안에서 CP 차이가 문턱보다 작은 샘플 쌍을 양성, 큰 쌍을 음성으로 삼는 InfoNCE 형 contrastive 손실을 예측 손실에 더한다.
+위험도가 비슷한 장면끼리 표현이 모이므로 충돌 위험이 큰 장면을 따로 구분해 배우게 된다.
+코드는 `tutr/contrastive/`, `qcnet/contrastive/` 이고 값은 설정 파일의 `contrastive` 절에 있다.
+
+### Membership 가이던스
+
+학습셋 궤적을 k-means 로 묶은 기동 프로토타입을 쓴다. 차량마다 목표 프로토타입을 정하고, 생성 궤적의 임베딩이 목표 프로토타입에 다른 프로토타입보다 여유 δ 이상 가깝도록 하는 hinge 손실의 gradient 를 확산 샘플링의 마지막 단계에 건다.
+주변 차량의 목표는 GT 가 속한 프로토타입이고, 여유를 어긴 차량에는 GT 쪽으로 당기는 anchor 항을 더해 원래 기동을 지킨다.
+tail 차량의 목표는 GT 와 가까운 프로토타입 가운데 학습셋에서 드문 것으로 바꿔 (`tail_mode: push`), 실제와 비슷하지만 드문 기동을 만든다.
+도로 이탈 방지와 차량 간 거리 유지의 물리 가이던스를 함께 건다.
+코드는 `generation/v7lib/membership_guidance.py` 이고 값은 `generation` 절에 있다.
+
+### RSS 재분배
+
+tail 장면마다 생성 개수를 다르게 준다. tail 차량과 이웃 차량 사이의 RSS 안전거리 위반 정도를 tail 차량의 진행방향 좌표계에서 종방향과 횡방향으로 계산해 장면 난이도로 삼는다.
+총 생성 개수는 장면 수의 12 배로 고정하고, 장면별 개수를 1 + γ·(정규화한 난이도) 에 비례해 최소 6 개, 최대 24 개 사이로 나눈다.
+코드는 `generation/v7lib/rss_alloc.py` 이고 값은 `allocation` 절에 있다. 배포한 설정 파일은 `crit: minade` 로 마이닝 minADE 에 비례해 나누며, `crit: rss` 로 바꾸면 RSS 난이도로 나눈다.
+
+### 안전 궤적 선택
+
+예측 후보 20 개 가운데 주행가능영역을 여유 3.5 m 이상 벗어난 후보를 지우고, 모델 확률에서 이웃 예측과의 CP 를 λ_c 배 뺀 점수 순으로 6 개를 고른다.
+λ_c 와 후보 채우기 여부는 val 분할에서만 고르고, 정답은 지표 계산에만 쓴다. TUTR 평가에 적용한다.
+코드는 `safe_select/` 이고 값은 `eval` 절에 있다.
+
+### 가중치
 
 Ours 는 가중치가 두 가지다.
 
 | 이름 | 내용 |
 |---|---|
 | `ours` | 논문 결과표의 가중치. `--stage eval` 이 기본으로 평가한다 |
-| `ours13` | 이 저장소의 `ours` 단계 (`configs/` 의 생성 설정) 로 학습한 가중치 |
+| `ours13` | 이 저장소의 `configs/` 로 `ours` 단계를 돌려 학습한 가중치 |
 
-두 가중치는 라운드 학습 절차 (시작점, 라운드별 epoch, 생성 데이터 비율) 가 같고 생성 데이터가 다르다.
-`ours` 의 생성 데이터는 별도의 생성 실행에서 만든 것으로, membership 가이던스 없이 실제 궤적 가이던스와 물리 가이던스만 걸었고 장면마다 12 개씩, 10 프레임마다 다시 계획해 만들었다. tail 장면도 그 실행에서 고른 것이다.
-그 생성 설정은 `configs/` 에 없으므로 `ours` 단계를 다시 돌리면 `ours` 가 아니라 `ours13` 이 나온다.
+`ours` 는 생성 설정이 `configs/` 와 달라서 이 저장소의 `ours` 단계로 다시 만들어지지 않는다. `ours` 단계를 다시 돌리면 `ours13` 이 나온다.
 
 입력은 관측 10 프레임 (1 초), 출력은 예측 30 프레임 (3 초) 이고 10 Hz 이다. 모든 학습은 seed 1 이고 모델 선택은 val 분할로만 한다.
 
@@ -154,7 +185,7 @@ python run.py --config configs/tutr_ny_ours13.json --stage prep,vanilla,vanilla_
 | `contrastive` | contrastive 손실의 가중치, 온도, 양성과 음성의 CP 차이 문턱, 난이도로 쓰는 manifest 열 |
 | `rounds` | 라운드별 epoch, 시작 epoch, 생성 데이터 가중치 감쇠 (`alpha`, `clip`), 한 epoch 에서 생성 데이터가 차지하는 비율 (`gen_frac`) |
 | `mining` | tail 을 찾는 분할과 비율. 차량별 minADE 상위 1 % |
-| `allocation` | 장면별 생성 개수. 마이닝 minADE 에 비례해 평균 12, 최소 6, 최대 24 |
+| `allocation` | 장면별 생성 개수. 평균 12, 최소 6, 최대 24. `crit` 이 `rss` 면 RSS 난이도, `minade` 면 마이닝 minADE 에 비례 |
 | `generation` | LCSim 가이던스. tail 차량과 주변 차량의 세기 (`lambda_tail`, `lambda_rel`), tail 목표 (`tail_mode: push`), membership 가이던스, 물리 가이던스 (도로 이탈 방지, 차량 간 거리) |
 | `eval` | K, 안전 궤적 선택의 후보 수와 주행가능영역 여유, λ_c 후보 |
 
