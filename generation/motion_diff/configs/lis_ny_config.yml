@@ -1,0 +1,63 @@
+title: motion-diff@lis_ny
+seed: 42
+version: lis_ny_hist10_fut30
+trainer:
+  accelerator: gpu
+  devices:
+  - 0
+  max_epochs: 200
+  val_interval: 10
+  ckpt_path: null
+dataset:
+  name: lis
+  data_dir: h5_ny
+  batch_size:
+    train: 16
+    val: 16
+  data_len:
+    train: null
+    val: null
+  num_workers: 0
+  pin_memory: false
+model:
+  target: module_vel
+  sigma_data: 0.1
+  input_dim: 2
+  output_dim: 2
+  hidden_dim: 128
+  num_historical_steps: 10
+  num_future_steps: 30
+  weight_decay: 0.03
+  lr: 0.0005
+  lr_scheduler: OneCycleLR
+  T_max: 200
+  pca_path: ../weights/lcsim/ny/pca.pkl
+  map_encoder:
+    num_pl_types: 20
+    polyline:
+      hidden_dim: 64
+      num_layers: 5
+      num_pre_layers: 3
+    num_freq_bands: 64
+  agent_encoder:
+    time_span: 10
+    a2a_radius: 50
+    pl2a_radius: 50
+    num_freq_bands: 64
+    num_layers: 2
+    num_heads: 8
+    head_dim: 16
+    dropout: 0.1
+  diff_decoder:
+    output_head: false
+    num_t2m_steps: 10
+    pl2m_radius: 150
+    a2m_radius: 150
+    num_freq_bands: 64
+    num_layers: 2
+    num_recurrent_steps: 2
+    num_heads: 8
+    head_dim: 16
+    dropout: 0.1
+    pca_dim: null
+  vel_mean: 0.6872

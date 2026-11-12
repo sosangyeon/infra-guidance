@@ -1,0 +1,21 @@
+# 데이터는 저장소에 올리지 않는다 (data/README.md 참고)
+data/*
+!data/README.md
+
+# 실행 결과
+runs/
+generation/h5_*/
+generation/runs/
+generation/outputs/
+safe_select/_maps/
+lightning_logs/
+
+# 큰 가중치는 GitHub Release 에서 받는다 (download_weights.py)
+*.ckpt
+*.part
+
+__pycache__/
+*.pyc
+*.h5
+.vscode/
+.idea/

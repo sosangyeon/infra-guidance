@@ -1,0 +1,102 @@
+{
+  "backbone": "qcnet",
+  "site": "ss",
+  "seed": 1,
+  "model": {
+    "dataset": "argoverse_v2_ACL",
+    "input_dim": 2,
+    "hidden_dim": 128,
+    "output_dim": 2,
+    "output_head": false,
+    "num_historical_steps": 10,
+    "num_future_steps": 30,
+    "num_modes": 6,
+    "num_recurrent_steps": 3,
+    "num_freq_bands": 64,
+    "num_map_layers": 1,
+    "num_agent_layers": 2,
+    "num_dec_layers": 2,
+    "num_heads": 8,
+    "head_dim": 16,
+    "dropout": 0.1,
+    "pl2pl_radius": 150,
+    "time_span": 10,
+    "pl2a_radius": 50,
+    "a2a_radius": 50,
+    "num_t2m_steps": 30,
+    "pl2m_radius": 150,
+    "a2m_radius": 150
+  },
+  "optimizer": {
+    "lr": 0.0005,
+    "weight_decay": 0.0001
+  },
+  "train": {
+    "batch_size": 16,
+    "max_epochs": 300,
+    "num_workers": 4
+  },
+  "contrastive": {
+    "cp_col": "qcnet_vanilla_cp_max",
+    "lambda_contrastive": 1.0,
+    "tau": 0.5,
+    "theta_p": 0.33,
+    "theta_n": 0.5,
+    "snap_epoch": 200
+  },
+  "rounds": {
+    "round_epochs": [
+      33,
+      33,
+      34
+    ],
+    "epoch_offset": 200,
+    "total_epochs": 300,
+    "alpha": 0.7,
+    "clip": 0.5,
+    "gen_frac": 0.5,
+    "select": "val_minADE+val_minADE_Worst3%",
+    "batch_size": 16,
+    "num_workers": 2
+  },
+  "mining": {
+    "unit": "vehicle",
+    "top_percent": 1.0
+  },
+  "allocation": {
+    "crit": "minade",
+    "num_aug": 12,
+    "floor": 6,
+    "cap": 24,
+    "gamma": 2.0,
+    "frame": "heading"
+  },
+  "generation": {
+    "lambda_tail": 0.25,
+    "lambda_rel": 0.6,
+    "plan_interval": 30,
+    "stitch": true,
+    "tail_mode": "push",
+    "push_alt": 3,
+    "membership": {
+      "margin": 0.05,
+      "alpha": 0.1,
+      "num_steps": 10,
+      "clip": 0.8,
+      "anchor_w": 1.0,
+      "pull_scope": "violators",
+      "guidance_steps": 7,
+      "denoised": true,
+      "scope": "all"
+    },
+    "physics": {
+      "modules": "no_offroad_exact,repeller_exact",
+      "head_only": true,
+      "repeller_radius": 2.5,
+      "no_offroad_eps": 0.0
+    }
+  },
+  "eval": {
+    "num_k": 6
+  }
+}

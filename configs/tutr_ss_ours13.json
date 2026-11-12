@@ -1,0 +1,93 @@
+{
+  "backbone": "tutr",
+  "site": "ss",
+  "seed": 1,
+  "data": {
+    "obs_len": 10,
+    "pred_len": 30,
+    "input_mode": "xy_vxvy_axay",
+    "output_mode": "xy_vxvy"
+  },
+  "model": {
+    "model_hidden_dim": 128,
+    "n_clusters": 90,
+    "smooth_size": 9,
+    "random_rotation": false,
+    "traj_seg": true,
+    "dist_threshold": 50
+  },
+  "train": {
+    "lr": 0.0001,
+    "batch_size": 128,
+    "epoch": 300,
+    "loss_weights": "1,1,1,1",
+    "num_workers": 4
+  },
+  "contrastive": {
+    "lambda_contr": 0.5,
+    "contr_tau": 0.5,
+    "contr_pos_delta": 0.33,
+    "contr_neg_delta": 0.33,
+    "cp_col": "vanilla_cp_max"
+  },
+  "rounds": {
+    "round_epochs": [
+      33,
+      33,
+      34
+    ],
+    "epoch_offset": 200,
+    "total_epochs": 300,
+    "alpha": 0.7,
+    "clip": 0.5,
+    "gen_frac": 0.1
+  },
+  "mining": {
+    "pool_split": "remain",
+    "top_percent": 1.0,
+    "mine_k": 20
+  },
+  "allocation": {
+    "crit": "minade",
+    "num_aug": 12,
+    "floor": 6,
+    "cap": 24,
+    "gamma": 2.0,
+    "frame": "heading"
+  },
+  "generation": {
+    "lambda_tail": 0.25,
+    "lambda_rel": 0.6,
+    "plan_interval": 30,
+    "stitch": true,
+    "tail_mode": "push",
+    "push_alt": 3,
+    "membership": {
+      "margin": 0.05,
+      "alpha": 0.1,
+      "num_steps": 10,
+      "clip": 0.8,
+      "anchor_w": 1.0,
+      "pull_scope": "violators",
+      "guidance_steps": 7,
+      "denoised": true,
+      "scope": "all"
+    },
+    "physics": {
+      "modules": "no_offroad_exact,repeller_exact",
+      "head_only": true,
+      "repeller_radius": 2.5,
+      "no_offroad_eps": 0.0
+    }
+  },
+  "eval": {
+    "num_k": 6,
+    "safe_select": {
+      "candidates": 20,
+      "K": 6,
+      "margin": 3.5,
+      "d_th": 50.0,
+      "lambdas": "0,0.25,0.5,1,2,4,8"
+    }
+  }
+}
