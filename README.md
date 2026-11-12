@@ -7,13 +7,24 @@
 |---|---|
 | Vanilla | 백본을 init 분할로 300 epoch 학습 |
 | Contrastive(CP) | Vanilla 예측의 충돌 확률 (CP) 을 난이도로 쓰는 contrastive 손실을 더해 300 epoch 학습 |
-| Ours (ours13) | Contrastive(CP) 의 0~200 epoch best 에서 시작해 100 epoch 을 3 라운드 (33, 33, 34) 로 이어서 학습. 라운드마다 remain 분할에서 오차가 큰 tail 장면을 찾고, 확산 모델 LCSim 에 가이던스를 걸어 그 장면을 다시 생성해 학습에 더한다 |
+| Ours | Contrastive(CP) 의 0~200 epoch best 에서 시작해 100 epoch 을 3 라운드 (33, 33, 34) 로 이어서 학습. 라운드마다 remain 분할에서 오차가 큰 tail 장면을 찾고, 확산 모델 LCSim 에 가이던스를 걸어 그 장면을 다시 생성해 학습에 더한다 |
+
+Ours 는 가중치가 두 가지다.
+
+| 이름 | 내용 |
+|---|---|
+| `ours` | 논문 결과표의 가중치. `--stage eval` 이 기본으로 평가한다 |
+| `ours13` | 이 저장소의 `ours` 단계 (`configs/` 의 생성 설정) 로 학습한 가중치 |
+
+두 가중치는 라운드 학습 절차 (시작점, 라운드별 epoch, 생성 데이터 비율) 가 같고 생성 데이터가 다르다.
+`ours` 의 생성 데이터는 별도의 생성 실행에서 만든 것으로, membership 가이던스 없이 실제 궤적 가이던스와 물리 가이던스만 걸었고 장면마다 12 개씩, 10 프레임마다 다시 계획해 만들었다. tail 장면도 그 실행에서 고른 것이다.
+그 생성 설정은 `configs/` 에 없으므로 `ours` 단계를 다시 돌리면 `ours` 가 아니라 `ours13` 이 나온다.
 
 입력은 관측 10 프레임 (1 초), 출력은 예측 30 프레임 (3 초) 이고 10 Hz 이다. 모든 학습은 seed 1 이고 모델 선택은 val 분할로만 한다.
 
 ## 결과
 
-test 분할, K = 6 이다. 저장소의 가중치로 `--stage eval` 을 돌리면 아래 숫자가 나온다.
+test 분할, K = 6 이다. 저장소의 가중치로 `--stage eval` 을 돌리면 아래 숫자가 나온다. 모델은 `--arm` 으로 고른다.
 
 TUTR 는 안전 궤적 선택 (`safe_select/`, 후보 20 개에서 6 개) 을 거친 값이다.
 
@@ -21,10 +32,12 @@ TUTR 는 안전 궤적 선택 (`safe_select/`, 후보 20 개에서 6 개) 을 �
 |---|---|---|---|---|---|---|
 | LIS-SS | Vanilla | 3.158 | 3.851 | 2.517 | 0.630 | 1.372 |
 | LIS-SS | Contrastive(CP) | 3.120 | 3.716 | 2.492 | 0.625 | 1.359 |
-| LIS-SS | Ours (ours13) | 3.169 | 3.783 | 2.597 | 0.628 | 1.365 |
+| LIS-SS | Ours (`ours`) | 3.084 | 3.677 | 2.400 | 0.619 | 1.344 |
+| LIS-SS | Ours (`ours13`) | 3.169 | 3.783 | 2.597 | 0.628 | 1.365 |
 | LIS-NY | Vanilla | 4.674 | 5.054 | 8.146 | 0.970 | 2.208 |
 | LIS-NY | Contrastive(CP) | 4.747 | 5.074 | 9.003 | 0.977 | 2.235 |
-| LIS-NY | Ours (ours13) | 4.082 | 4.688 | 6.860 | 0.901 | 2.060 |
+| LIS-NY | Ours (`ours`) | 4.241 | 4.855 | 7.262 | 0.913 | 2.099 |
+| LIS-NY | Ours (`ours13`) | 4.082 | 4.688 | 6.860 | 0.901 | 2.060 |
 
 QCNet 은 모델이 낸 6 개를 그대로 평가한 값이다.
 
@@ -32,10 +45,12 @@ QCNet 은 모델이 낸 6 개를 그대로 평가한 값이다.
 |---|---|---|---|---|
 | LIS-SS | Vanilla | 2.799 | 0.455 | 0.860 |
 | LIS-SS | Contrastive(CP) | 2.816 | 0.466 | 0.876 |
-| LIS-SS | Ours (ours13) | 2.669 | 0.450 | 0.838 |
+| LIS-SS | Ours (`ours`) | 2.523 | 0.436 | 0.795 |
+| LIS-SS | Ours (`ours13`) | 2.669 | 0.450 | 0.838 |
 | LIS-NY | Vanilla | 6.811 | 1.008 | 2.242 |
 | LIS-NY | Contrastive(CP) | 7.162 | 1.007 | 2.255 |
-| LIS-NY | Ours (ours13) | 6.484 | 0.908 | 1.987 |
+| LIS-NY | Ours (`ours`) | 5.979 | 0.897 | 1.969 |
+| LIS-NY | Ours (`ours13`) | 6.484 | 0.908 | 1.987 |
 
 지표의 뜻은 다음과 같다.
 
@@ -86,9 +101,10 @@ python download_weights.py --only lcsim    # TUTR 만 쓸 때
 | `weights/tutr/<site>/vanilla/best.pth` | Vanilla |
 | `weights/tutr/<site>/contrastive/best.pth` | Contrastive(CP), 0~300 epoch best |
 | `weights/tutr/<site>/contrastive/best_2of3.pth` | Contrastive(CP), 0~200 epoch best. Ours 의 시작점 |
-| `weights/tutr/<site>/ours13/best.pth` | Ours |
+| `weights/tutr/<site>/ours/best.pth` | Ours, 논문 결과표의 가중치 |
+| `weights/tutr/<site>/ours13/best.pth` | Ours, 이 저장소의 `ours` 단계로 학습한 가중치 |
 | `weights/tutr/<site>/<방법>/run_motion_modes.pkl` | 그 모델이 쓰는 motion mode (k-means 중심) |
-| `weights/qcnet/<site>/{vanilla,contrastive,contrastive_best_2of3,ours13}.ckpt` | QCNet, 뜻은 TUTR 와 같다 |
+| `weights/qcnet/<site>/{vanilla,contrastive,contrastive_best_2of3,ours,ours13}.ckpt` | QCNet, 뜻은 TUTR 와 같다 |
 | `weights/lcsim/<site>/lcsim_<site>.ckpt`, `pca.pkl` | 생성에 쓰는 LCSim 확산 모델 |
 
 ## 실행
@@ -96,13 +112,14 @@ python download_weights.py --only lcsim    # TUTR 만 쓸 때
 모든 단계는 `run.py` 하나로 돌린다. 설정 파일 하나가 백본 하나와 사이트 하나의 실험이다.
 
 ```
-python run.py --config configs/<backbone>_<site>_ours13.json --stage <단계>[,<단계>...] [--arm vanilla|contrastive|ours13]
+python run.py --config configs/<backbone>_<site>_ours13.json --stage <단계>[,<단계>...] [--arm vanilla|contrastive|ours|ours13]
 ```
 
 받은 가중치로 평가만 하려면 `prep` 과 `eval` 만 돌리면 된다.
 
 ```
-python run.py --config configs/tutr_ny_ours13.json --stage eval                    # Ours
+python run.py --config configs/tutr_ny_ours13.json --stage eval                    # Ours (ours)
+python run.py --config configs/tutr_ny_ours13.json --stage eval --arm ours13
 python run.py --config configs/tutr_ny_ours13.json --stage eval --arm vanilla
 python run.py --config configs/qcnet_ny_ours13.json --stage eval --arm contrastive
 ```
@@ -124,7 +141,7 @@ python run.py --config configs/tutr_ny_ours13.json --stage prep,vanilla,vanilla_
 | `eval` | test 예측, CP 계산, 지표 출력. TUTR 는 안전 궤적 선택까지 한다 | `runs/<backbone>/<site>/eval/<arm>` |
 
 `runs/` 에 직접 학습한 모델이 있으면 그것을 쓰고, 없으면 `weights/` 의 것을 쓴다.
-그래서 `ours` 단계만 따로 돌리면 받은 Vanilla, Contrastive(CP), LCSim 가중치에서 Ours 학습만 다시 한다.
+그래서 `ours` 단계만 따로 돌리면 받은 Vanilla, Contrastive(CP), LCSim 가중치에서 Ours 학습만 다시 한다. 그 결과는 `--arm ours13` 으로 평가한다.
 `eval` 과 `vanilla_cp` 는 `data/scenarios/manifest_<site>.csv` 에 CP 열을 더한다.
 
 ## 설정 파일

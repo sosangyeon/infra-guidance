@@ -10,9 +10,11 @@
   contrastive  Contrastive(CP) 학습 (init, 300 epoch). 0~200 epoch best 가 Ours 의 시작점
   lcsim        LCSim 확산 모델 학습 + C2 기동 어휘 (사이트당 한 번, 두 백본 공용)
   ours         Ours 3 라운드 (200~300 epoch): tail 마이닝 -> 생성 -> contrastive + 생성 데이터 학습
-  eval         test 평가 (--arm vanilla | contrastive | ours13, 기본 ours13)
+  eval         test 평가 (--arm vanilla | contrastive | ours | ours13, 기본 ours)
 
 가중치 위치: runs/<backbone>/<site>/ 에 직접 학습한 것이 있으면 그것, 없으면 weights/ 의 배포 가중치를 쓴다.
+  ours   = 논문 결과표의 가중치. 배포 가중치만 있다 (weights/).
+  ours13 = ours 단계 (이 저장소의 생성 코드) 로 학습한 가중치. runs/ 에 다시 학습한 것이 있으면 그것을 쓴다.
 출력은 모두 runs/<backbone>/<site>/ 아래에 쓴다 (compute_cp.py 는 data/scenarios/manifest_<site>.csv 에 CP 열을 더한다).
 """
 import argparse
@@ -25,7 +27,7 @@ import sys
 ROOT = os.path.dirname(os.path.abspath(__file__))
 PY = sys.executable
 STAGES = ['prep', 'vanilla', 'vanilla_cp', 'contrastive', 'lcsim', 'ours', 'eval']
-ARMS = ['vanilla', 'contrastive', 'ours13']
+ARMS = ['vanilla', 'contrastive', 'ours', 'ours13']
 
 for _s in (sys.stdout, sys.stderr):   # 한글을 못 쓰는 콘솔 코드페이지에서도 멈추지 않게
     _s.reconfigure(errors='replace')
@@ -108,7 +110,9 @@ def eval_lab(site, metrics, prefix, name):
 def tutr_dir(c, arm):
     """실험 폴더 (best.pth, run_motion_modes.pkl). runs/ 가 먼저, 없으면 weights/."""
     site = c['site']
-    if arm == 'ours13':
+    if arm == 'ours':                                      # 배포 가중치만 있다
+        cand = []
+    elif arm == 'ours13':
         cand = [P('runs', 'tutr', site, 'ours13', f"round{len(c['rounds']['round_epochs'])}")]
     else:
         cand = sorted(os.path.dirname(p) for p in glob.glob(P('runs', 'tutr', site, arm, '*', 'best.pth')))
@@ -183,7 +187,9 @@ def qcnet_ckpt(c, arm, start=False):
     """체크포인트 파일, 또는 val_minFDE best 를 고를 실험 폴더. start = Contrastive(CP) 의 0~200 best."""
     site = c['site']
     run = P('runs', 'qcnet', site, arm)
-    if arm == 'ours13':
+    if arm == 'ours':                                      # 배포 가중치만 있다
+        own, w = '', 'ours.ckpt'
+    elif arm == 'ours13':
         own, w = os.path.join(run, f"round{len(c['rounds']['round_epochs'])}", 'best.ckpt'), 'ours13.ckpt'
     elif start:
         own, w = os.path.join(run, 'best_2of3.ckpt'), 'contrastive_best_2of3.ckpt'
@@ -251,7 +257,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--config', required=True, help='configs/<backbone>_<site>_ours13.json')
     ap.add_argument('--stage', required=True, help='쉼표로 여러 개: ' + ', '.join(STAGES))
-    ap.add_argument('--arm', default='ours13', choices=ARMS, help='eval 에서 평가할 모델')
+    ap.add_argument('--arm', default='ours', choices=ARMS, help='eval 에서 평가할 모델')
     a = ap.parse_args()
     cfg = os.path.abspath(a.config)
     with open(cfg, encoding='utf-8') as f:

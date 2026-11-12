@@ -14,7 +14,7 @@ import urllib.request
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 URL = 'https://github.com/sosangyeon/infra-guidance/releases/download/v1.0/'
-QCNET = ['vanilla', 'contrastive', 'contrastive_best_2of3', 'ours13']
+QCNET = ['vanilla', 'contrastive', 'contrastive_best_2of3', 'ours', 'ours13']
 
 for _s in (sys.stdout, sys.stderr):   # 한글을 못 쓰는 콘솔 코드페이지에서도 멈추지 않게
     _s.reconfigure(errors='replace')
